@@ -1,0 +1,7 @@
+services:
+  editor.route_subscriber:
+    class: Drupal\editor\Routing\RouteSubscriber
+    arguments: []
+    tags:
+      - { name: event_subscriber }
+

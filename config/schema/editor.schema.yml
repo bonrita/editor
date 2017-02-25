@@ -1,0 +1,12 @@
+# Schema for configuration files of the Chep editor module.
+
+chep_editor.field_collection_embed_min_max:
+  type: config_object
+  label: 'Chep editor field collection embed min max settings'
+  mapping:
+    min:
+      type: integer
+      label: 'The minimum number of field collection items to be added.'
+    max:
+      type: integer
+      label: 'The maximum number of field collection items to be added.'

@@ -1,0 +1,108 @@
+<?php
+
+/**
+ * @file
+ * Hook implementations for Editor module.
+ */
+
+/**
+ * Implements hook_form_alter().
+ */
+function editor_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form_state, $form_id) {
+  if ($bundle = editor_is_node_edit_form($form_id)) {
+    $headline_image_field = &$form['field__a01_image_headline']['widget'][0]['field_a01_image'];
+
+    // A01 Image Headline images on specific content types.
+    $with_header_image = \Drupal\ips\ChGlobal::contentTypesWithHeaderImage();
+    if (in_array($bundle, $with_header_image)) {
+      // Make Image field required in all other cases.
+      $headline_image_field['widget'][0]['#required'] = TRUE;
+    }
+    else {
+      // Hide image field on Category and Solution type pages.
+      $headline_image_field['#access'] = FALSE;
+    }
+
+    // Validate required paragraphs.
+    $form['#validate'][] = 'editor_validate_required_paragraphs';
+  }
+}
+
+/**
+ * Checks if the form is a node edit form.
+ *
+ * @param string $form_id
+ *   The form ID.
+ *
+ * @return FALSE|string
+ *    Returns the node bundle if the form is a node edit form.
+ */
+function editor_is_node_edit_form($form_id) {
+  $matches = [];
+
+  // Catch both 'node_{node bundle}_edit_form' and 'node_{node bundle}_form'.
+  $form_id = strtr($form_id, ['_edit' => '']);
+  if (preg_match('@node_(.*)_form@', $form_id, $matches)) {
+    return $matches[1];
+  }
+
+  return FALSE;
+}
+
+/**
+ * Implements hook_field_widget_info_alter().
+ */
+function editor_field_widget_info_alter(array &$info) {
+  // Allow Checkboxes/radiobuttons widget to be used for language field.
+  $info['options_buttons']['field_types'][] = 'language_field';
+}
+
+/**
+ * Validate required paragraphs.
+ *
+ * Make sure the required fields are added to the paragraph.
+ *
+ * @param array $form
+ *   Structure of the form.
+ *
+ * @param \Drupal\Core\Form\FormStateInterface $form_state
+ *   Current state of the form.
+ */
+function editor_validate_required_paragraphs(array &$form, \Drupal\Core\Form\FormStateInterface $form_state) {
+  // The field that contains the paragraphs.
+  // @todo Determine the paragraph host dynamically based on the field type.
+  $host_field = 'field__modules';
+
+  module_load_include('inc', 'editor', 'includes/editor.admin');
+
+  // Only validate when publishing the entity.
+  $triggering_element = $form_state->getTriggeringElement();
+  if (empty($triggering_element['#published_status'])) {
+    return;
+  }
+
+  // Apply the field error to the host field.
+  $missing_paragraphs = editor_get_missing_paragraphs($form_state, $host_field);
+  if (!empty($missing_paragraphs)) {
+    $missing_items = [];
+    foreach ($missing_paragraphs as $name) {
+      $paragraph = paragraphs_type_load($name);
+      $missing_items[] = $paragraph->label();
+    }
+
+    $form_state->setErrorByName("$host_field][add_more", t('The following modules are required : @modules.', ['@modules' => implode(', ', $missing_items)]));
+  }
+}
+
+/**
+ * Implements hook_user_login().
+ *
+ * Redirects users to the admin page when logging in.
+ *
+ * @param \Drupal\Core\Session\AccountInterface $account
+ */
+function editor_user_login(\Drupal\Core\Session\AccountInterface $account) {
+  $url = \Drupal\Core\URL::fromRoute('system.admin_content')->toString();
+  $response = new \Symfony\Component\HttpFoundation\RedirectResponse($url, 302);
+  $response->send();
+}

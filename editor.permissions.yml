@@ -1,0 +1,3 @@
+chep editor access menu items:
+  title: 'Access to editor menu items'
+  description: 'See Drupal\editor\Routing\RouteSubscriber for details.'
